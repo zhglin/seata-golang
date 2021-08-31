@@ -11,6 +11,7 @@ type GlobalSessionLocker interface {
 	Unlock(session *apis.GlobalSession)
 }
 
+// UnimplementedGlobalSessionLocker 未实现的全局锁
 type UnimplementedGlobalSessionLocker struct {
 }
 

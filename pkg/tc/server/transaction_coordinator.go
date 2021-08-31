@@ -28,6 +28,7 @@ import (
 
 const ALWAYS_RETRY_BOUNDARY = 0
 
+// TransactionCoordinator 协调器 TC
 type TransactionCoordinator struct {
 	sync.Mutex
 	maxCommitRetryTimeout            int64
@@ -44,7 +45,9 @@ type TransactionCoordinator struct {
 	locker             GlobalSessionLocker
 
 	keepaliveClientParameters keepalive.ClientParameters
-	tcServiceClients          map[string]apis.BranchTransactionServiceClient
+
+	// 对客户端的rpc链接
+	tcServiceClients map[string]apis.BranchTransactionServiceClient
 }
 
 func NewTransactionCoordinator(conf *config.Configuration) *TransactionCoordinator {
@@ -78,8 +81,10 @@ func NewTransactionCoordinator(conf *config.Configuration) *TransactionCoordinat
 	return tc
 }
 
+// Begin 开启全局事务
 func (tc TransactionCoordinator) Begin(ctx context.Context, request *apis.GlobalBeginRequest) (*apis.GlobalBeginResponse, error) {
 	transactionID := uuid.NextID()
+	// 生成xid 返回客户端
 	xid := common.GenerateXID(request.Addressing, transactionID)
 	gt := model.GlobalTransaction{
 		GlobalSession: &apis.GlobalSession{
@@ -90,6 +95,8 @@ func (tc TransactionCoordinator) Begin(ctx context.Context, request *apis.Global
 			Timeout:         request.Timeout,
 		},
 	}
+
+	// 设置全局事务状态
 	gt.Begin()
 	err := tc.holder.AddGlobalSession(gt.GlobalSession)
 	if err != nil {
@@ -100,6 +107,7 @@ func (tc TransactionCoordinator) Begin(ctx context.Context, request *apis.Global
 		}, nil
 	}
 
+	// 监控
 	runtime.GoWithRecover(func() {
 		evt := event.NewGlobalTransactionEvent(gt.TransactionID, event.RoleTC, gt.TransactionName, gt.BeginTime, 0, gt.Status)
 		event.EventBus.GlobalTransactionEventChannel <- evt
@@ -130,7 +138,9 @@ func (tc TransactionCoordinator) GlobalReport(ctx context.Context, request *apis
 	return nil, status.Errorf(codes.Unimplemented, "method GlobalReport not implemented")
 }
 
+// Commit 全局事务提交
 func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.GlobalCommitRequest) (*apis.GlobalCommitResponse, error) {
+	// 获取全局事务以及对应的分支分支事务
 	gt := tc.holder.FindGlobalTransaction(request.XID)
 	if gt == nil {
 		return &apis.GlobalCommitResponse{
@@ -138,6 +148,8 @@ func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.Globa
 			GlobalStatus: apis.Finished,
 		}, nil
 	}
+
+	// 删除行锁，更新全局事务状态
 	shouldCommit, err := func(gt *model.GlobalTransaction) (bool, error) {
 		result, err := tc.locker.TryLock(gt.GlobalSession, time.Duration(gt.Timeout)*time.Millisecond)
 		if err != nil {
@@ -145,11 +157,13 @@ func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.Globa
 		}
 		if result {
 			defer tc.locker.Unlock(gt.GlobalSession)
+			// 如果全局事务是活跃状态 设置成不活跃状态 避免再注册分支事务
 			if gt.Active {
 				// Active need persistence
 				// Highlight: Firstly, close the session, then no more branch can be registered.
 				tc.holder.InactiveGlobalSession(gt.GlobalSession)
 			}
+			// 删除所有行锁
 			tc.resourceDataLocker.ReleaseGlobalSessionLock(gt)
 			if gt.Status == apis.Begin {
 				tc.holder.UpdateGlobalSessionStatus(gt.GlobalSession, apis.Committing)
@@ -169,6 +183,7 @@ func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.Globa
 		}, nil
 	}
 
+	// 非begin状态 重复commit
 	if !shouldCommit {
 		if gt.Status == apis.AsyncCommitting {
 			return &apis.GlobalCommitResponse{
@@ -182,13 +197,16 @@ func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.Globa
 		}, nil
 	}
 
+	// 能否异步提交
 	if gt.CanBeCommittedAsync() {
+		// 异步提交
 		tc.holder.UpdateGlobalSessionStatus(gt.GlobalSession, apis.AsyncCommitting)
 		return &apis.GlobalCommitResponse{
 			ResultCode:   apis.ResultCodeSuccess,
 			GlobalStatus: apis.Committed,
 		}, nil
 	} else {
+		// 同步提交
 		_, err := tc.doGlobalCommit(gt, false)
 		if err != nil {
 			return &apis.GlobalCommitResponse{
@@ -205,6 +223,7 @@ func (tc TransactionCoordinator) Commit(ctx context.Context, request *apis.Globa
 	}
 }
 
+// 全局事务提交
 func (tc TransactionCoordinator) doGlobalCommit(gt *model.GlobalTransaction, retrying bool) (bool, error) {
 	var (
 		success = true
@@ -494,7 +513,9 @@ func (tc TransactionCoordinator) branchRollback(bs *apis.BranchSession) (apis.Br
 	}
 }
 
+// BranchRegister 注册分支事务
 func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *apis.BranchRegisterRequest) (*apis.BranchRegisterResponse, error) {
+	// 全局事务 已经 分支事务
 	gt := tc.holder.FindGlobalTransaction(request.XID)
 	if gt == nil {
 		log.Errorf("could not found global transaction xid = %s", request.XID)
@@ -515,6 +536,7 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 	}
 	if result {
 		defer tc.locker.Unlock(gt.GlobalSession)
+		// 非活跃状态
 		if !gt.Active {
 			return &apis.BranchRegisterResponse{
 				ResultCode:    apis.ResultCodeFailed,
@@ -522,6 +544,7 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 				Message:       fmt.Sprintf("could not register branch into global session xid = %s status = %d", gt.XID, gt.Status),
 			}, nil
 		}
+		// 非begin状态
 		if gt.Status != apis.Begin {
 			return &apis.BranchRegisterResponse{
 				ResultCode:    apis.ResultCodeFailed,
@@ -531,19 +554,21 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 			}, nil
 		}
 
+		// 分支事务
 		bs := &apis.BranchSession{
 			Addressing:      request.Addressing,
 			XID:             request.XID,
-			BranchID:        uuid.NextID(),
+			BranchID:        uuid.NextID(), // 分支事务id
 			TransactionID:   gt.TransactionID,
 			ResourceID:      request.ResourceID,
 			LockKey:         request.LockKey,
 			Type:            request.BranchType,
-			Status:          apis.Registered,
+			Status:          apis.Registered, // 初始状态
 			ApplicationData: request.ApplicationData,
 		}
 
 		if bs.Type == apis.AT {
+			// AT模式加行锁
 			result := tc.resourceDataLocker.AcquireLock(bs)
 			if !result {
 				return &apis.BranchRegisterResponse{
@@ -555,6 +580,7 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 			}
 		}
 
+		// 添加分支事务
 		err := tc.holder.AddBranchSession(gt.GlobalSession, bs)
 		if err != nil {
 			return &apis.BranchRegisterResponse{
@@ -565,6 +591,7 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 		}
 
 		if !gt.IsSaga() {
+			// 建立对client的链接
 			tc.getTransactionCoordinatorServiceClient(bs.Addressing)
 		}
 
@@ -581,7 +608,9 @@ func (tc TransactionCoordinator) BranchRegister(ctx context.Context, request *ap
 	}, nil
 }
 
+// BranchReport 分支事务状态上报
 func (tc TransactionCoordinator) BranchReport(ctx context.Context, request *apis.BranchReportRequest) (*apis.BranchReportResponse, error) {
+	// 全局事务+分支事务
 	gt := tc.holder.FindGlobalTransaction(request.XID)
 	if gt == nil {
 		log.Errorf("could not found global transaction xid = %s", request.XID)
@@ -592,6 +621,7 @@ func (tc TransactionCoordinator) BranchReport(ctx context.Context, request *apis
 		}, nil
 	}
 
+	// 获取指定的分支事务
 	bs := gt.GetBranch(request.BranchID)
 	if bs == nil {
 		return &apis.BranchReportResponse{
@@ -601,6 +631,7 @@ func (tc TransactionCoordinator) BranchReport(ctx context.Context, request *apis
 		}, nil
 	}
 
+	// 更新分支事务状态
 	err := tc.holder.UpdateBranchSessionStatus(bs, request.BranchStatus)
 	if err != nil {
 		return &apis.BranchReportResponse{
@@ -615,6 +646,7 @@ func (tc TransactionCoordinator) BranchReport(ctx context.Context, request *apis
 	}, nil
 }
 
+// LockQuery 是否已存在行锁
 func (tc TransactionCoordinator) LockQuery(ctx context.Context, request *apis.GlobalLockQueryRequest) (*apis.GlobalLockQueryResponse, error) {
 	result := tc.resourceDataLocker.IsLockable(request.XID, request.ResourceID, request.LockKey)
 	return &apis.GlobalLockQueryResponse{
@@ -623,6 +655,7 @@ func (tc TransactionCoordinator) LockQuery(ctx context.Context, request *apis.Gl
 	}, nil
 }
 
+// 建立并返回对客户端的grpc链接
 func (tc TransactionCoordinator) getTransactionCoordinatorServiceClient(addressing string) (apis.BranchTransactionServiceClient, error) {
 	client1, ok1 := tc.tcServiceClients[addressing]
 	if ok1 {

@@ -6,6 +6,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/tc/storage"
 )
 
+// SessionHolder 会话管理 记录事务执行状态，持久化事务数据，TC重启时应能加载事务数据重新提交或回滚，使TC高可用
 type SessionHolder struct {
 	manager storage.SessionManager
 }
@@ -14,6 +15,7 @@ func NewSessionHolder(manager storage.SessionManager) *SessionHolder {
 	return &SessionHolder{manager: manager}
 }
 
+// AddGlobalSession 添加全部事务
 func (holder *SessionHolder) AddGlobalSession(session *apis.GlobalSession) error {
 	return holder.manager.AddGlobalSession(session)
 }
@@ -22,9 +24,11 @@ func (holder *SessionHolder) FindGlobalSession(xid string) *apis.GlobalSession {
 	return holder.manager.FindGlobalSession(xid)
 }
 
+// FindGlobalTransaction 根据xid查找对应的分支事务
 func (holder *SessionHolder) FindGlobalTransaction(xid string) *model.GlobalTransaction {
 	globalSession := holder.manager.FindGlobalSession(xid)
 	if globalSession != nil {
+		// 分支事务
 		gt := &model.GlobalTransaction{GlobalSession: globalSession}
 		branchSessions := holder.manager.FindBranchSessions(xid)
 		if branchSessions != nil && len(branchSessions) != 0 {

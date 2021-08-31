@@ -5,6 +5,7 @@ import (
 )
 
 // SessionManager stored the globalTransactions and branchTransactions.
+// 存储了globalTransactions和branchTransactions。
 type SessionManager interface {
 	// Add global session.
 	AddGlobalSession(session *apis.GlobalSession) error
@@ -43,6 +44,7 @@ type SessionManager interface {
 	RemoveBranchSession(globalSession *apis.GlobalSession, session *apis.BranchSession) error
 }
 
+// LockManager 相关锁管理
 type LockManager interface {
 	// AcquireLock Acquire lock boolean.
 	AcquireLock(rowLocks []*apis.RowLock) bool

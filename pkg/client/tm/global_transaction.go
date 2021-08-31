@@ -37,10 +37,12 @@ type GlobalTransaction interface {
 type GlobalTransactionRole byte
 
 const (
-	// The Launcher. The one begins the current global transaction.
+	// Launcher The Launcher. The one begins the current global transaction.
+	// 开始当前全局事务。
 	Launcher GlobalTransactionRole = iota
 
-	// The Participant. The one just joins into a existing global transaction.
+	// Participant The Participant. The one just joins into a existing global transaction.
+	// 参与到现有的全局事务。
 	Participant
 )
 
@@ -71,7 +73,9 @@ func (gtx *DefaultGlobalTransaction) BeginWithTimeout(timeout int32, ctx *ctx.Ro
 	return gtx.BeginWithTimeoutAndName(timeout, DEFAULT_GLOBAL_TX_NAME, ctx)
 }
 
+// BeginWithTimeoutAndName 开启全局事务
 func (gtx *DefaultGlobalTransaction) BeginWithTimeoutAndName(timeout int32, name string, ctx *ctx.RootContext) error {
+	// 非开启全局事务并且xid为空
 	if gtx.Role != Launcher {
 		if gtx.XID == "" {
 			return errors.New("xid should not be empty")
@@ -79,9 +83,13 @@ func (gtx *DefaultGlobalTransaction) BeginWithTimeoutAndName(timeout int32, name
 		log.Debugf("Ignore Begin(): just involved in global transaction [%s]", gtx.XID)
 		return nil
 	}
+
+	// 全局事务id必须为空
 	if gtx.XID != "" {
 		return errors.New("xid should be empty")
 	}
+
+	// context中存在全局事务id
 	if ctx.InGlobalTransaction() {
 		return errors.New("xid should be empty")
 	}
@@ -89,6 +97,8 @@ func (gtx *DefaultGlobalTransaction) BeginWithTimeoutAndName(timeout int32, name
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	// 设置全局事务id，状态
 	gtx.XID = xid
 	gtx.Status = apis.Begin
 	ctx.Bind(xid)
@@ -160,10 +170,11 @@ func (gtx *DefaultGlobalTransaction) Rollback(ctx *ctx.RootContext) error {
 	return nil
 }
 
+// Suspend 解绑全局事务id
 func (gtx *DefaultGlobalTransaction) Suspend(unbindXid bool, ctx *ctx.RootContext) (*SuspendedResourcesHolder, error) {
 	xid := ctx.GetXID()
 	if xid != "" && unbindXid {
-		ctx.Unbind()
+		ctx.Unbind() // 删除
 		log.Debugf("suspending current transaction,xid = %s", xid)
 	}
 	return &SuspendedResourcesHolder{Xid: xid}, nil
@@ -228,6 +239,7 @@ func (gtx *DefaultGlobalTransaction) GetLocalStatus() apis.GlobalSession_GlobalS
 	return gtx.Status
 }
 
+// CreateNew 创建默认的
 func CreateNew() *DefaultGlobalTransaction {
 	return &DefaultGlobalTransaction{
 		conf:               config.GetTMConfig(),
@@ -238,6 +250,7 @@ func CreateNew() *DefaultGlobalTransaction {
 	}
 }
 
+// GetCurrent 根据ctx信息创建有事务id的
 func GetCurrent(ctx *ctx.RootContext) *DefaultGlobalTransaction {
 	xid := ctx.GetXID()
 	if xid == "" {
@@ -252,6 +265,8 @@ func GetCurrent(ctx *ctx.RootContext) *DefaultGlobalTransaction {
 	}
 }
 
+// GetCurrentOrCreate 全局事务管理器
+// 如果没有全局事务id就新建
 func GetCurrentOrCreate(ctx *ctx.RootContext) *DefaultGlobalTransaction {
 	tx := GetCurrent(ctx)
 	if tx == nil {

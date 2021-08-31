@@ -21,13 +21,19 @@ import (
 type Configuration struct {
 	Server struct {
 		Port                             int   `yaml:"port"`
+		// 二阶段提交重试超时时长
 		MaxCommitRetryTimeout            int64 `yaml:"maxCommitRetryTimeout"`
+		// 二阶段回滚重试超时时长
 		MaxRollbackRetryTimeout          int64 `yaml:"maxRollbackRetryTimeout"`
 		RollbackRetryTimeoutUnlockEnable bool  `yaml:"rollbackRetryTimeoutUnlockEnable"`
 
+		// 二阶段异步提交状态重试提交线程间隔时间
 		AsyncCommittingRetryPeriod time.Duration `yaml:"asyncCommittingRetryPeriod"`
+		// 二阶段提交未完成状态全局事务重试提交线程间隔时间
 		CommittingRetryPeriod      time.Duration `yaml:"committingRetryPeriod"`
+		// 二阶段回滚状态重试回滚线程间隔时间
 		RollingBackRetryPeriod     time.Duration `yaml:"rollingBackRetryPeriod"`
+		// 超时状态检测重试线程间隔时间，单位毫秒，检测出超时将全局事务置入回滚会话管理器s
 		TimeoutRetryPeriod         time.Duration `yaml:"timeoutRetryPeriod"`
 	} `yaml:"server"`
 
@@ -191,6 +197,7 @@ func (storage Storage) MarshalYAML() (interface{}, error) {
 // following the scheme below:
 // Configuration.Abc may be replaced by the value of SEATA_ABC,
 // Configuration.Abc.Xyz may be replaced by the value of SEATA_ABC_XYZ, and so forth
+// 解析yaml配置文件
 func Parse(rd io.Reader) (*Configuration, error) {
 	in, err := ioutil.ReadAll(rd)
 	if err != nil {

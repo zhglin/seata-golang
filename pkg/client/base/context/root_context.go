@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	KeyXID                = "TX_XID"
+	KeyXID                = "TX_XID" // 全局事务id
 	KeyXIDInterceptorType = "tx-xid-interceptor-type"
 	KeyGlobalLockFlag     = "TX_LOCK"
 )
@@ -24,6 +24,7 @@ type RootContext struct {
 }
 
 // NewRootContext return a pointer to RootContext
+// 创建rootContext，并绑定全局事务id
 func NewRootContext(ctx context.Context) *RootContext {
 	rootCtx := &RootContext{
 		Context:  ctx,
@@ -39,6 +40,7 @@ func NewRootContext(ctx context.Context) *RootContext {
 }
 
 // Set store key value to RootContext
+// RootContext中存储键值
 func (c *RootContext) Set(key string, value interface{}) {
 	if c.localMap == nil {
 		c.localMap = make(map[string]interface{})
@@ -53,13 +55,16 @@ func (c *RootContext) Get(key string) (value interface{}, exists bool) {
 }
 
 // GetXID from RootContext get xid
+// 从RootContext中获取全局的事务id (xid)
 func (c *RootContext) GetXID() string {
+	// 存在直接返回
 	xID := c.localMap[KeyXID]
 	xid, ok := xID.(string)
 	if ok && xid != "" {
 		return xid
 	}
 
+	// todo
 	xIDType := c.localMap[KeyXIDInterceptorType]
 	xidType, success := xIDType.(string)
 
@@ -78,6 +83,7 @@ func (c *RootContext) GetXIDInterceptorType() string {
 }
 
 // Bind bind xid with RootContext
+// 绑定全局事务id(xid)
 func (c *RootContext) Bind(xid string) {
 	log.Debugf("bind %s", xid)
 	c.Set(KeyXID, xid)
@@ -109,6 +115,7 @@ func (c *RootContext) BindGlobalLockFlag() {
 }
 
 // Unbind unbind xid with RootContext
+// 从RootContext中删除全局事务xid
 func (c *RootContext) Unbind() string {
 	xID := c.localMap[KeyXID]
 	xid, ok := xID.(string)
@@ -140,6 +147,7 @@ func (c *RootContext) UnbindGlobalLockFlag() {
 }
 
 // InGlobalTransaction determine whether the context is in global transaction
+// 确定上下文是否在全局事务中
 func (c *RootContext) InGlobalTransaction() bool {
 	return c.localMap[KeyXID] != nil
 }

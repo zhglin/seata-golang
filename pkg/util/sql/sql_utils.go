@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// MysqlAppendInParam 构建sql占位符
 func MysqlAppendInParam(size int) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "(")

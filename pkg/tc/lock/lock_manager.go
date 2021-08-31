@@ -7,6 +7,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/util/log"
 )
 
+// LockManager 锁管理
 type LockManager struct {
 	manager storage.LockManager
 }
@@ -15,6 +16,7 @@ func NewLockManager(manager storage.LockManager) *LockManager {
 	return &LockManager{manager: manager}
 }
 
+// AcquireLock 对分支事务进行加行锁
 func (locker *LockManager) AcquireLock(branchSession *apis.BranchSession) bool {
 	if branchSession == nil {
 		log.Debug("branchSession can't be null for memory/file locker.")
@@ -33,6 +35,7 @@ func (locker *LockManager) AcquireLock(branchSession *apis.BranchSession) bool {
 	return locker.manager.AcquireLock(locks)
 }
 
+// ReleaseLock 释放分支事务行锁
 func (locker *LockManager) ReleaseLock(branchSession *apis.BranchSession) bool {
 	if branchSession == nil {
 		log.Debug("branchSession can't be null for memory/file locker.")
@@ -51,6 +54,7 @@ func (locker *LockManager) ReleaseLock(branchSession *apis.BranchSession) bool {
 	return locker.manager.ReleaseLock(locks)
 }
 
+// ReleaseGlobalSessionLock 释放分支事务锁
 func (locker *LockManager) ReleaseGlobalSessionLock(globalTransaction *model.GlobalTransaction) bool {
 	locks := make([]*apis.RowLock, 0)
 	for branchSession := range globalTransaction.BranchSessions {

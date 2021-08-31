@@ -19,6 +19,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/util/log"
 )
 
+// https://www.bilibili.com/video/BV1oz411e72T
 func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
@@ -42,8 +43,10 @@ func main() {
 					configPath := c.String("config")
 					serverNode := c.Int64("serverNode")
 
+					// 加载配置文件
 					config, err := resolveConfiguration(configPath)
 
+					// 设置id生成器的workerId
 					uuid.Init(serverNode)
 					log.Init(config.Log.LogPath, config.Log.LogLevel)
 
@@ -75,9 +78,11 @@ func main() {
 	}
 }
 
+// 加载配置文件
 func resolveConfiguration(configPath string) (*config.Configuration, error) {
 	var configurationPath string
 
+	// 配置文件路径
 	if configPath != "" {
 		configurationPath = configPath
 	} else if os.Getenv("SEATA_CONFIGURATION_PATH") != "" {

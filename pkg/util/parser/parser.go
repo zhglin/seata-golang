@@ -12,6 +12,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/util/log"
 )
 
+// os环境变量
 type envVar struct {
 	name  string
 	value string
@@ -25,16 +26,19 @@ func (a envVars) Less(i, j int) bool { return a[i].name < a[j].name }
 
 // Parser can be used to parse a configuration file and environment
 // into a unified output structure
+// 解析器可用于将配置文件和环境解析为统一的输出结构
 type Parser struct {
-	prefix string
+	prefix string // 环境变量配置的前缀
 	env    envVars
 }
 
 // NewParser returns a *Parser with the given environment prefix which handles
 // configurations which match the given parseInfos
+// NewParser返回一个带有给定环境前缀的*Parser，该前缀处理匹配给定parseInfos的配置
 func NewParser(prefix string) *Parser {
 	p := Parser{prefix: prefix}
 
+	// Environ返回表示环境变量的格式为"key=value"的字符串的切片拷贝。
 	for _, env := range os.Environ() {
 		envParts := strings.SplitN(env, "=", 2)
 		p.env = append(p.env, envVar{envParts[0], envParts[1]})
@@ -44,6 +48,8 @@ func NewParser(prefix string) *Parser {
 	// more specific variables are applied before less specific ones
 	// but it's a lot simpler and easier to get right than unmarshalling
 	// map entries into temporaries and merging with the existing entry.
+	// 我们必须按名称对环境变量进行词法排序，以便在不太特定的变量之前应用更特定的变量，
+	// 但这比将映射项解组到临时表项并与现有表项合并要简单得多。
 	sort.Sort(p.env)
 
 	return &p
@@ -56,12 +62,14 @@ func NewParser(prefix string) *Parser {
 // following the scheme below:
 // v.Abc may be replaced by the value of PREFIX_ABC,
 // v.Abc.Xyz may be replaced by the value of PREFIX_ABC_XYZ, and so forth
+// 使用环境变量替换配置文件
 func (p *Parser) Parse(in []byte, v interface{}) error {
 	err := yaml.Unmarshal(in, v)
 	if err != nil {
 		return err
 	}
 
+	// 环境变量替换
 	for _, envVar := range p.env {
 		pathStr := envVar.name
 		if strings.HasPrefix(pathStr, strings.ToUpper(p.prefix)+"_") {
@@ -80,11 +88,13 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 // overwriteFields replaces configuration values with alternate values specified
 // through the environment. Precondition: an empty path slice must never be
 // passed in.
+// 将配置值替换为通过环境指定的替代值。前提条件:不能传入空的路径。
 func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string, payload string) error {
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			panic("encountered nil pointer while handling environment variable " + fullpath)
 		}
+		// 返回持有v持有的指针指向的值的Value
 		v = reflect.Indirect(v)
 	}
 	switch v.Kind() {
@@ -109,16 +119,19 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 
 func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string, payload string) error {
 	// Generate case-insensitive map of struct fields
+	// 生成struct字段的不区分大小写的映射
 	byUpperCase := make(map[string]int)
 	for i := 0; i < v.NumField(); i++ {
 		sf := v.Type().Field(i)
 		upper := strings.ToUpper(sf.Name)
+		// 配置项重复 大小写不同
 		if _, present := byUpperCase[upper]; present {
 			panic(fmt.Sprintf("field name collision in configuration object: %s", sf.Name))
 		}
 		byUpperCase[upper] = i
 	}
 
+	// 未找到要替换的路径
 	fieldIndex, present := byUpperCase[path[0]]
 	if !present {
 		log.Warnf("ignoring unrecognized environment variable %s", fullpath)
@@ -129,6 +142,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 
 	if len(path) == 1 {
 		// Env var specifies this field directly
+		// Env var直接指定该字段
 		fieldVal := reflect.New(sf.Type)
 		err := yaml.Unmarshal([]byte(payload), fieldVal.Interface())
 		if err != nil {

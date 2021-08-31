@@ -6,9 +6,9 @@ import (
 )
 
 type GlobalTransaction struct {
-	*apis.GlobalSession
+	*apis.GlobalSession // 全局事务
 
-	BranchSessions map[*apis.BranchSession]bool
+	BranchSessions map[*apis.BranchSession]bool // 分支事务
 }
 
 func (gt *GlobalTransaction) Add(branchSession *apis.BranchSession) {
@@ -20,6 +20,7 @@ func (gt *GlobalTransaction) Remove(branchSession *apis.BranchSession) {
 	delete(gt.BranchSessions, branchSession)
 }
 
+// GetBranch 查询指定的分支事务
 func (gt *GlobalTransaction) GetBranch(branchID int64) *apis.BranchSession {
 	for branchSession := range gt.BranchSessions {
 		if branchSession.BranchID == branchID {
@@ -29,6 +30,7 @@ func (gt *GlobalTransaction) GetBranch(branchID int64) *apis.BranchSession {
 	return nil
 }
 
+// CanBeCommittedAsync 是否异步提交
 func (gt *GlobalTransaction) CanBeCommittedAsync() bool {
 	for branchSession := range gt.BranchSessions {
 		if branchSession.Type == apis.TCC {
@@ -38,6 +40,7 @@ func (gt *GlobalTransaction) CanBeCommittedAsync() bool {
 	return true
 }
 
+// IsSaga 是否是saga模式
 func (gt *GlobalTransaction) IsSaga() bool {
 	for branchSession := range gt.BranchSessions {
 		if branchSession.Type == apis.SAGA {
@@ -68,6 +71,7 @@ func (gt *GlobalTransaction) HasBranch() bool {
 	return len(gt.BranchSessions) > 0
 }
 
+// Begin 开启全局事务 设置状态
 func (gt *GlobalTransaction) Begin() {
 	gt.Status = apis.Begin
 	gt.BeginTime = int64(time.CurrentTimeMillis())

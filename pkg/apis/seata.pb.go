@@ -59,6 +59,7 @@ const (
 	BeginFailed ExceptionCode = 1
 	//*
 	// Lock key conflict transaction error code.
+	// 分支事务加行锁失败错误代码。
 	LockKeyConflict ExceptionCode = 2
 	//*
 	// Io transaction error code.
@@ -71,6 +72,7 @@ const (
 	BranchRollbackFailedUnretryable ExceptionCode = 5
 	//*
 	// Branch register failed transaction error code.
+	// 分支事务注册失败的错误代码。
 	BranchRegisterFailed ExceptionCode = 6
 	//*
 	// Branch report failed transaction error code.
@@ -86,9 +88,11 @@ const (
 	GlobalTransactionNotExist ExceptionCode = 10
 	//*
 	// Global transaction not active transaction error code.
+	// 全局事务未激活事务错误代码。
 	GlobalTransactionNotActive ExceptionCode = 11
 	//*
 	// Global transaction status invalid transaction error code.
+	// 全局事务状态无效事务错误代码。
 	GlobalTransactionStatusInvalid ExceptionCode = 12
 	//*
 	// Failed to send branch commit request transaction error code.
@@ -101,6 +105,7 @@ const (
 	FailedToAddBranch ExceptionCode = 15
 	//*
 	// Failed to lock global transaction error code.
+	// 全局事务锁加锁错误码。
 	FailedLockGlobalTransaction ExceptionCode = 16
 	//*
 	// FailedWriteSession
@@ -166,9 +171,11 @@ const (
 	UnknownGlobalStatus GlobalSession_GlobalStatus = 0
 	//*
 	// PHASE 1: can accept new branch registering.
+	// 第一阶段：可接受新分支注册。
 	Begin GlobalSession_GlobalStatus = 1
 	//*
 	// PHASE 2: Running Status: may be changed any time.
+	// 第二阶段：运行状态:可随时更改。
 	Committing GlobalSession_GlobalStatus = 2
 	//*
 	// The Commit retrying.
@@ -192,6 +199,7 @@ const (
 	//*
 	// All branches can be async committed. The committing is NOT done yet, but it can be seen as committed for TM/RM
 	// rpc_client.
+	// 所有分支都可以异步提交。提交尚未完成，但可以将其视为已提交TM/RM rpc_client。
 	AsyncCommitting GlobalSession_GlobalStatus = 8
 	//*
 	// PHASE 2: Final Status: will NOT change any more.
@@ -300,6 +308,7 @@ const (
 	UnknownBranchStatus BranchSession_BranchStatus = 0
 	//*
 	// description:BranchStatus_Registered to TC.
+	// 分支事务已注册到TC。
 	Registered BranchSession_BranchStatus = 1
 	//*
 	// The Phase one done.
@@ -308,6 +317,8 @@ const (
 	//*
 	// The Phase one failed.
 	// description:Branch logic is failed at phase one.
+	// 第一阶段失败。
+	// 描述:在第一阶段分支逻辑失败。
 	PhaseOneFailed BranchSession_BranchStatus = 3
 	//*
 	// The Phase one timeout.
@@ -371,15 +382,18 @@ func (BranchSession_BranchStatus) EnumDescriptor() ([]byte, []int) {
 	return fileDescriptor_450a439f8893981f, []int{1, 1}
 }
 
+// 全局事务信息
 type GlobalSession struct {
-	Addressing      string                     `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
-	XID             string                     `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
-	TransactionID   int64                      `protobuf:"varint,3,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
-	TransactionName string                     `protobuf:"bytes,4,opt,name=TransactionName,proto3" json:"TransactionName,omitempty" xorm:"transaction_name"`
-	Timeout         int32                      `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty" xorm:"timeout"`
-	BeginTime       int64                      `protobuf:"varint,6,opt,name=BeginTime,proto3" json:"BeginTime,omitempty" xorm:"begin_time"`
-	Status          GlobalSession_GlobalStatus `protobuf:"varint,7,opt,name=Status,proto3,enum=apis.GlobalSession_GlobalStatus" json:"Status,omitempty" xorm:"status"`
-	Active          bool                       `protobuf:"varint,8,opt,name=Active,proto3" json:"Active,omitempty" xorm:"active"`
+	Addressing      string `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
+	XID             string `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
+	TransactionID   int64  `protobuf:"varint,3,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
+	TransactionName string `protobuf:"bytes,4,opt,name=TransactionName,proto3" json:"TransactionName,omitempty" xorm:"transaction_name"`
+	Timeout         int32  `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty" xorm:"timeout"`
+	// 开始时间
+	BeginTime int64                      `protobuf:"varint,6,opt,name=BeginTime,proto3" json:"BeginTime,omitempty" xorm:"begin_time"`
+	Status    GlobalSession_GlobalStatus `protobuf:"varint,7,opt,name=Status,proto3,enum=apis.GlobalSession_GlobalStatus" json:"Status,omitempty" xorm:"status"`
+	// 是否活跃  非活跃状态不允许添加分支事务
+	Active bool `protobuf:"varint,8,opt,name=Active,proto3" json:"Active,omitempty" xorm:"active"`
 }
 
 func (m *GlobalSession) Reset()      { *m = GlobalSession{} }
@@ -470,10 +484,13 @@ func (m *GlobalSession) GetActive() bool {
 	return false
 }
 
+// 分支事务
 type BranchSession struct {
-	Addressing      string                     `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
-	XID             string                     `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
-	BranchID        int64                      `protobuf:"varint,3,opt,name=BranchID,proto3" json:"BranchID,omitempty" xorm:"branch_id"`
+	Addressing string `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
+	XID        string `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
+	// 当前分支事务id
+	BranchID int64 `protobuf:"varint,3,opt,name=BranchID,proto3" json:"BranchID,omitempty" xorm:"branch_id"`
+	// 全局事务id
 	TransactionID   int64                      `protobuf:"varint,4,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
 	ResourceID      string                     `protobuf:"bytes,5,opt,name=ResourceID,proto3" json:"ResourceID,omitempty" xorm:"resource_id"`
 	LockKey         string                     `protobuf:"bytes,6,opt,name=LockKey,proto3" json:"LockKey,omitempty" xorm:"lock_key"`
@@ -577,6 +594,7 @@ func (m *BranchSession) GetApplicationData() []byte {
 	return nil
 }
 
+// 分支事务的行锁
 type RowLock struct {
 	XID           string `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
 	TransactionID int64  `protobuf:"varint,2,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
@@ -584,7 +602,8 @@ type RowLock struct {
 	ResourceID    string `protobuf:"bytes,4,opt,name=ResourceID,proto3" json:"ResourceID,omitempty" xorm:"resource_id"`
 	TableName     string `protobuf:"bytes,5,opt,name=TableName,proto3" json:"TableName,omitempty" xorm:"table_name"`
 	PK            string `protobuf:"bytes,6,opt,name=PK,proto3" json:"PK,omitempty" xorm:"pk"`
-	RowKey        string `protobuf:"bytes,7,opt,name=RowKey,proto3" json:"RowKey,omitempty" xorm:"row_key"`
+	// 表中记录的锁标识
+	RowKey string `protobuf:"bytes,7,opt,name=RowKey,proto3" json:"RowKey,omitempty" xorm:"row_key"`
 }
 
 func (m *RowLock) Reset()      { *m = RowLock{} }
@@ -797,8 +816,10 @@ func (m *GlobalBeginResponse) GetXID() string {
 }
 
 // BranchRegisterRequest represents a branch transaction join in the global transaction
+// 表示全局事务中的分支事务
 type BranchRegisterRequest struct {
-	Addressing      string                   `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty"`
+	Addressing string `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty"`
+	// 全局事务id
 	XID             string                   `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty"`
 	ResourceID      string                   `protobuf:"bytes,3,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
 	LockKey         string                   `protobuf:"bytes,4,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
