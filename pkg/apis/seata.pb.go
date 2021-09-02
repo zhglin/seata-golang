@@ -178,7 +178,7 @@ const (
 	// Un known global status.
 	UnknownGlobalStatus GlobalSession_GlobalStatus = 0
 	// PHASE 1: can accept new branch registering.
-	// 第一阶段：可接受新分支注册。
+	// 第一阶段：开启全局事务，可接受新分支注册。
 	Begin GlobalSession_GlobalStatus = 1
 	// PHASE 2: Running Status: may be changed any time.
 	// 第二阶段：运行状态:可随时更改。

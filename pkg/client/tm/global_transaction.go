@@ -59,10 +59,10 @@ func (role GlobalTransactionRole) String() string {
 
 type DefaultGlobalTransaction struct {
 	conf               config.TMConfig
-	XID                string
-	Status             apis.GlobalSession_GlobalStatus
-	Role               GlobalTransactionRole
-	transactionManager TransactionManagerInterface
+	XID                string                          // 全局事务id
+	Status             apis.GlobalSession_GlobalStatus // 全局事务状态
+	Role               GlobalTransactionRole           // 事务行为 开启还是重用
+	transactionManager TransactionManagerInterface     // tc
 }
 
 func (gtx *DefaultGlobalTransaction) Begin(ctx *ctx.RootContext) error {
@@ -106,11 +106,12 @@ func (gtx *DefaultGlobalTransaction) BeginWithTimeoutAndName(timeout int32, name
 	return nil
 }
 
+// Commit 提交全局事务 todo commit异常
 func (gtx *DefaultGlobalTransaction) Commit(ctx *ctx.RootContext) error {
 	defer func() {
 		ctxXid := ctx.GetXID()
 		if ctxXid != "" && gtx.XID == ctxXid {
-			ctx.Unbind()
+			ctx.Unbind() // 提交之后解除全局事务id
 		}
 	}()
 	if gtx.Role == Participant {
@@ -138,11 +139,12 @@ func (gtx *DefaultGlobalTransaction) Commit(ctx *ctx.RootContext) error {
 	return nil
 }
 
+// Rollback 回滚全局事务	todo 回滚异常
 func (gtx *DefaultGlobalTransaction) Rollback(ctx *ctx.RootContext) error {
 	defer func() {
 		ctxXid := ctx.GetXID()
 		if ctxXid != "" && gtx.XID == ctxXid {
-			ctx.Unbind()
+			ctx.Unbind() // 操作完成解绑全局事务id
 		}
 	}()
 	if gtx.Role == Participant {
@@ -180,6 +182,7 @@ func (gtx *DefaultGlobalTransaction) Suspend(unbindXid bool, ctx *ctx.RootContex
 	return &SuspendedResourcesHolder{Xid: xid}, nil
 }
 
+// Resume 解绑之后还原全局事务id
 func (gtx *DefaultGlobalTransaction) Resume(suspendedResourcesHolder *SuspendedResourcesHolder, ctx *ctx.RootContext) error {
 	if suspendedResourcesHolder == nil {
 		return nil

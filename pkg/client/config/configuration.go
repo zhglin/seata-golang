@@ -16,6 +16,7 @@ var configuration *Configuration
 
 // Configuration client configuration
 type Configuration struct {
+	// 当前节点的网络地址
 	Addressing       string `yaml:"addressing" json:"addressing"`
 	ServerAddressing string `yaml:"serverAddressing" json:"serverAddressing"`
 
@@ -37,7 +38,9 @@ type Configuration struct {
 
 // TMConfig
 type TMConfig struct {
-	CommitRetryCount   int32 `default:"5" yaml:"commitRetryCount" json:"commitRetryCount,omitempty"`
+	// 提交失败后的重试次数
+	CommitRetryCount int32 `default:"5" yaml:"commitRetryCount" json:"commitRetryCount,omitempty"`
+	// 回滚失败后的重试次数
 	RollbackRetryCount int32 `default:"5" yaml:"rollbackRetryCount" json:"rollbackRetryCount,omitempty"`
 }
 

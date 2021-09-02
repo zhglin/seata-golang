@@ -26,6 +26,7 @@ type TransactionManagerInterface interface {
 	GlobalReport(ctx context.Context, xid string, globalStatus apis.GlobalSession_GlobalStatus) (apis.GlobalSession_GlobalStatus, error)
 }
 
+// TransactionManager 事务管理器 tc链接
 type TransactionManager struct {
 	addressing string
 	rpcClient  apis.TransactionManagerServiceClient
