@@ -55,6 +55,7 @@ const (
 	// Unknown transaction error code.
 	UnknownErr ExceptionCode = 0
 	// BeginFailed
+	// 开启全局事务异常
 	BeginFailed ExceptionCode = 1
 	// Lock key conflict transaction error code.
 	// 分支事务加行锁失败错误代码。
@@ -174,6 +175,7 @@ func (BranchMessageType) EnumDescriptor() ([]byte, []int) {
 
 type GlobalSession_GlobalStatus int32
 
+// 全局事务状态
 const (
 	// Un known global status.
 	UnknownGlobalStatus GlobalSession_GlobalStatus = 0
@@ -185,17 +187,22 @@ const (
 	Committing GlobalSession_GlobalStatus = 2
 	// The Commit retrying.
 	// Retrying commit after a recoverable failure.
+	// 提交重试。在可恢复失败后重新尝试提交。
 	CommitRetrying GlobalSession_GlobalStatus = 3
 	// Rolling back global status.
+	// 正在回滚全局状态。
 	RollingBack GlobalSession_GlobalStatus = 4
 	// The Rollback retrying.
 	// Retrying rollback after a recoverable failure.
+	// 回滚重试。在可恢复失败后重试回滚。
 	RollbackRetrying GlobalSession_GlobalStatus = 5
 	// The Timeout rolling back.
 	// Rolling back since timeout
+	// 全局事务超时 回滚 commit会报错
 	TimeoutRollingBack GlobalSession_GlobalStatus = 6
 	// The Timeout rollback retrying.
 	// Retrying rollback (since timeout) after a recoverable failure.
+	// 超时回滚重试。在可恢复失败后重新尝试回滚(自超时以来)。
 	TimeoutRollbackRetrying GlobalSession_GlobalStatus = 7
 	// All branches can be async committed. The committing is NOT done yet, but it can be seen as
 	// committed for TM/RM rpc_client.
@@ -203,21 +210,27 @@ const (
 	AsyncCommitting GlobalSession_GlobalStatus = 8
 	// PHASE 2: Final Status: will NOT change any more.
 	// Finally: global transaction is successfully committed.
+	// 阶段2:最终状态，全局事务成功提交。
 	Committed GlobalSession_GlobalStatus = 9
 	// The Commit failed.
 	// Finally: failed to commit
+	// 提交失败
 	CommitFailed GlobalSession_GlobalStatus = 10
 	// The RolledBack.
 	// Finally: global transaction is successfully rollback.
+	// 回滚成功，未超时，未重试
 	RolledBack GlobalSession_GlobalStatus = 11
 	// The Rollback failed.
 	// Finally: failed to rollback
+	// 回滚失败
 	RollbackFailed GlobalSession_GlobalStatus = 12
 	// The Timeout rolled back.
 	// Finally: global transaction is successfully rollback since timeout.
+	// 超时回滚。全局事务在超时后成功回滚。
 	TimeoutRolledBack GlobalSession_GlobalStatus = 13
 	// The Timeout rollback failed.
 	// Finally: failed to rollback since timeout
+	// 超时回滚失败。
 	TimeoutRollbackFailed GlobalSession_GlobalStatus = 14
 	// The Finished.
 	// Not managed in getty_session MAP any more
@@ -295,6 +308,7 @@ func (BranchSession_BranchType) EnumDescriptor() ([]byte, []int) {
 
 type BranchSession_BranchStatus int32
 
+// 分支事务状态
 const (
 	// description:BranchStatus_Unknown branch status.
 	UnknownBranchStatus BranchSession_BranchStatus = 0
@@ -303,32 +317,37 @@ const (
 	Registered BranchSession_BranchStatus = 1
 	// The Phase one done.
 	// description:Branch logic is successfully done at phase one.
+	// 第一阶段完成。分支逻辑在第一阶段成功完成。
 	PhaseOneDone BranchSession_BranchStatus = 2
 	// The Phase one failed.
 	// description:Branch logic is failed at phase one.
-	// 第一阶段失败。
-	// 描述:在第一阶段分支逻辑失败。
+	// 第一阶段失败。描述:在第一阶段分支逻辑失败。本地直接回滚
 	PhaseOneFailed BranchSession_BranchStatus = 3
 	// The Phase one timeout.
 	// description:Branch logic is NOT reported for a timeout.
 	PhaseOneTimeout BranchSession_BranchStatus = 4
 	// The Phase two committed.
 	// description:Commit logic is successfully done at phase two.
+	//第二阶段已提交。描述:提交逻辑在第二阶段成功完成。
 	PhaseTwoCommitted BranchSession_BranchStatus = 5
 	// The Phase two commit failed retryable.
 	// description:Commit logic is failed but retryable.
 	PhaseTwoCommitFailedRetryable BranchSession_BranchStatus = 6
 	// The Phase two commit failed and can not retry.
 	// description:Commit logic is failed and NOT retryable.
+	// 第二阶段提交失败，不能重试。
 	PhaseTwoCommitFailedCanNotRetry BranchSession_BranchStatus = 7
 	// The Phase two rollback completed.
 	// description:Rollback logic is successfully done at phase two.
+	// 第二阶段回滚完成。回滚逻辑在第二阶段成功完成
 	PhaseTwoRolledBack BranchSession_BranchStatus = 8
 	// The Phase two rollback failed retryable.
 	// description:Rollback logic is failed but retryable.
+	//第二阶段回滚失败。回滚逻辑失败，但可以进行重试。(获取数据库连接失败)
 	PhaseTwoRollbackFailedRetryable BranchSession_BranchStatus = 9
 	// The Phase two rollback failed and can not retry.
 	// description:Rollback logic is failed but NOT retryable.
+	// 第二阶段回滚失败，不能重试。
 	PhaseTwoRollbackFailedCanNotRetry BranchSession_BranchStatus = 10
 )
 
@@ -370,7 +389,8 @@ type GlobalSession struct {
 	XID             string `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
 	TransactionID   int64  `protobuf:"varint,3,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
 	TransactionName string `protobuf:"bytes,4,opt,name=TransactionName,proto3" json:"TransactionName,omitempty" xorm:"transaction_name"`
-	Timeout         int32  `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty" xorm:"timeout"`
+	// 全局事务超时时间
+	Timeout int32 `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty" xorm:"timeout"`
 	// 开始时间
 	BeginTime int64                      `protobuf:"varint,6,opt,name=BeginTime,proto3" json:"BeginTime,omitempty" xorm:"begin_time"`
 	Status    GlobalSession_GlobalStatus `protobuf:"varint,7,opt,name=Status,proto3,enum=apis.GlobalSession_GlobalStatus" json:"Status,omitempty" xorm:"status"`
@@ -1940,6 +1960,7 @@ func (m *BranchRollbackRequest) GetApplicationData() []byte {
 }
 
 // BranchRollbackResponse represents a response to BranchRollbackRequest
+// 分支事务回滚的相应
 type BranchRollbackResponse struct {
 	ResultCode    ResultCode                 `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=apis.ResultCode" json:"ResultCode,omitempty"`
 	ExceptionCode ExceptionCode              `protobuf:"varint,2,opt,name=ExceptionCode,proto3,enum=apis.ExceptionCode" json:"ExceptionCode,omitempty"`

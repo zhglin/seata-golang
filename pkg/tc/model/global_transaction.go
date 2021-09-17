@@ -30,7 +30,7 @@ func (gt *GlobalTransaction) GetBranch(branchID int64) *apis.BranchSession {
 	return nil
 }
 
-// CanBeCommittedAsync 是否异步提交
+// CanBeCommittedAsync 是否能异步提交
 func (gt *GlobalTransaction) CanBeCommittedAsync() bool {
 	for branchSession := range gt.BranchSessions {
 		if branchSession.Type == apis.TCC {
@@ -67,6 +67,7 @@ func (gt *GlobalTransaction) IsTimeoutGlobalStatus() bool {
 		gt.Status == apis.TimeoutRollbackRetrying
 }
 
+// HasBranch 是否存在分支事务
 func (gt *GlobalTransaction) HasBranch() bool {
 	return len(gt.BranchSessions) > 0
 }

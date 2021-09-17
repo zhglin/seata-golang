@@ -3,6 +3,7 @@ package common
 import "github.com/opentrx/seata-golang/v2/pkg/apis"
 
 // MessageFuture ...
+// 阻塞的响应
 type MessageFuture struct {
 	ID       int64
 	Err      error

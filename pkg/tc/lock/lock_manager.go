@@ -7,7 +7,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/util/log"
 )
 
-// LockManager 锁管理
+// LockManager 行级锁管理
 type LockManager struct {
 	manager storage.LockManager
 }

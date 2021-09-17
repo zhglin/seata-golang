@@ -236,7 +236,8 @@ func (driver *driver) FindGlobalSession(xid string) *apis.GlobalSession {
 	return nil
 }
 
-// Find global sessions list.
+// FindGlobalSessions Find global sessions list.
+// 查找指定状态的全局事务数据
 func (driver *driver) FindGlobalSessions(statuses []apis.GlobalSession_GlobalStatus) []*apis.GlobalSession {
 	var globalSessions []*apis.GlobalSession
 	err := driver.engine.Table(driver.globalTable).
@@ -296,7 +297,8 @@ func (driver *driver) InactiveGlobalSession(session *apis.GlobalSession) error {
 	return err
 }
 
-// Remove global session.
+// RemoveGlobalSession Remove global session.
+// 删除全局事务
 func (driver *driver) RemoveGlobalSession(session *apis.GlobalSession) error {
 	_, err := driver.engine.Exec(fmt.Sprintf(DeleteGlobalTransaction, driver.globalTable), session.XID)
 	return err
@@ -349,7 +351,8 @@ func (driver *driver) UpdateBranchSessionStatus(session *apis.BranchSession, sta
 	return err
 }
 
-// Remove branch session.
+// RemoveBranchSession Remove branch session.
+// 删除分支事务
 func (driver *driver) RemoveBranchSession(globalSession *apis.GlobalSession, session *apis.BranchSession) error {
 	_, err := driver.engine.Exec(fmt.Sprintf(DeleteBranchTransaction, driver.branchTable),
 		session.XID,

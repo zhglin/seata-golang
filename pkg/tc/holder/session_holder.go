@@ -20,6 +20,7 @@ func (holder *SessionHolder) AddGlobalSession(session *apis.GlobalSession) error
 	return holder.manager.AddGlobalSession(session)
 }
 
+// FindGlobalSession 获取全局事务信息
 func (holder *SessionHolder) FindGlobalSession(xid string) *apis.GlobalSession {
 	return holder.manager.FindGlobalSession(xid)
 }
@@ -126,6 +127,7 @@ func (holder *SessionHolder) UpdateGlobalSessionStatus(session *apis.GlobalSessi
 	return holder.manager.UpdateGlobalSessionStatus(session, status)
 }
 
+// InactiveGlobalSession 关闭全局事务active状态
 func (holder *SessionHolder) InactiveGlobalSession(session *apis.GlobalSession) error {
 	session.Active = false
 	return holder.manager.InactiveGlobalSession(session)
@@ -135,6 +137,7 @@ func (holder *SessionHolder) RemoveGlobalSession(session *apis.GlobalSession) er
 	return holder.manager.RemoveGlobalSession(session)
 }
 
+// RemoveGlobalTransaction 清除全局事务以及分支事务
 func (holder *SessionHolder) RemoveGlobalTransaction(globalTransaction *model.GlobalTransaction) error {
 	holder.manager.RemoveGlobalSession(globalTransaction.GlobalSession)
 	for bs := range globalTransaction.BranchSessions {
