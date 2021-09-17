@@ -32,7 +32,7 @@ func (holder *SessionHolder) FindGlobalTransaction(xid string) *model.GlobalTran
 		// 分支事务
 		gt := &model.GlobalTransaction{GlobalSession: globalSession}
 		branchSessions := holder.manager.FindBranchSessions(xid)
-		if branchSessions != nil && len(branchSessions) != 0 {
+		if len(branchSessions) != 0 {
 			gt.BranchSessions = make(map[*apis.BranchSession]bool, len(branchSessions))
 			for i := 0; i < len(branchSessions); i++ {
 				gt.BranchSessions[branchSessions[i]] = true
@@ -73,7 +73,7 @@ func (holder *SessionHolder) findGlobalTransactionsWithAddressingIdentities(stat
 }
 
 func (holder *SessionHolder) findGlobalTransactionsByGlobalSessions(sessions []*apis.GlobalSession) []*model.GlobalTransaction {
-	if sessions == nil || len(sessions) == 0 {
+	if len(sessions) == 0 {
 		return nil
 	}
 
@@ -99,11 +99,11 @@ func (holder *SessionHolder) findGlobalTransactionsByGlobalSessions(sessions []*
 	for j := 0; j < len(sessions); j++ {
 		globalTransaction := &model.GlobalTransaction{
 			GlobalSession:  sessions[j],
-			BranchSessions: make(map[*apis.BranchSession]bool, 0),
+			BranchSessions: map[*apis.BranchSession]bool{},
 		}
 
 		branchSessionSlice := branchSessionMap[sessions[j].XID]
-		if branchSessionSlice != nil && len(branchSessionSlice) > 0 {
+		if len(branchSessionSlice) > 0 {
 			for x := 0; x < len(branchSessionSlice); x++ {
 				globalTransaction.BranchSessions[branchSessionSlice[x]] = true
 			}
@@ -139,9 +139,15 @@ func (holder *SessionHolder) RemoveGlobalSession(session *apis.GlobalSession) er
 
 // RemoveGlobalTransaction 清除全局事务以及分支事务
 func (holder *SessionHolder) RemoveGlobalTransaction(globalTransaction *model.GlobalTransaction) error {
-	holder.manager.RemoveGlobalSession(globalTransaction.GlobalSession)
+	err := holder.manager.RemoveGlobalSession(globalTransaction.GlobalSession)
+	if err != nil {
+		return err
+	}
 	for bs := range globalTransaction.BranchSessions {
-		holder.manager.RemoveBranchSession(globalTransaction.GlobalSession, bs)
+		err = holder.manager.RemoveBranchSession(globalTransaction.GlobalSession, bs)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

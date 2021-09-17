@@ -31,9 +31,9 @@ func NewRootContext(ctx context.Context) *RootContext {
 		localMap: make(map[string]interface{}),
 	}
 
-	kXID := ctx.Value(KeyXID)
-	if kXID != nil {
-		xid := kXID.(string)
+	xID := ctx.Value(KeyXID)
+	if xID != nil {
+		xid := xID.(string)
 		rootCtx.Bind(xid)
 	}
 	return rootCtx

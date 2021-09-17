@@ -40,7 +40,7 @@ const (
 // lowest  12 bit: sequence
 //									时间戳                            序列号
 // 00000000 000 (00000 00000000 00000000 00000000 00000000 0000) (0000 00000000)
-var timestampAndSequence uint64 = 0
+var timestampAndSequence uint64
 
 // business meaning: machine ID (0 ~ 1023)
 // actual layout in memory:
@@ -71,13 +71,13 @@ func NextID() int64 {
 	waitIfNecessary()
 	next := atomic.AddUint64(&timestampAndSequence, 1)
 	timestampWithSequence := next & timestampAndSequenceMask // 防止bit数溢出
-	return int64(uint64(workerID) | timestampWithSequence) // 加上workerId
+	return int64(uint64(workerID) | timestampWithSequence)   // 加上workerId
 }
 
 func waitIfNecessary() {
 	currentWithSequence := atomic.LoadUint64(&timestampAndSequence)
 	current := currentWithSequence >> sequenceBits // 时间戳
-	newest := getNewestTimestamp() // 当前的的时间戳
+	newest := getNewestTimestamp()                 // 当前的的时间戳
 	for current >= newest {
 		newest = getNewestTimestamp()
 	}
@@ -118,7 +118,7 @@ func generateWorkerIDBaseOnMac() (int64, error) {
 		mac := iface.HardwareAddr
 
 		// 0b-2进制 0x-16进制
-		return int64(int((mac[4]&0b11)<<8) | int(mac[5]&0xFF)), nil
+		return int64(int(rune(mac[4]&0b11)<<8) | int(mac[5]&0xFF)), nil
 	}
 	return 0, fmt.Errorf("no available mac found")
 }

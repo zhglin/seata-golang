@@ -56,8 +56,8 @@ type Configuration struct {
 	Storage Storage `yaml:"storage"`
 
 	Log struct {
-		LogPath  string       `yaml:"logPath"`
-		LogLevel log.LogLevel `yaml:"logLevel"`
+		LogPath  string    `yaml:"logPath"`
+		LogLevel log.Level `yaml:"logLevel"`
 	} `yaml:"log"`
 }
 

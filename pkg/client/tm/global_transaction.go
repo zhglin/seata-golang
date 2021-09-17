@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	DEFAULT_GLOBAL_TX_TIMEOUT = 60000
-	DEFAULT_GLOBAL_TX_NAME    = "default"
+	DefaultGlobalTxTimeout = 60000
+	DefaultGlobalTxName    = "default"
 )
 
 type SuspendedResourcesHolder struct {
@@ -66,11 +66,11 @@ type DefaultGlobalTransaction struct {
 }
 
 func (gtx *DefaultGlobalTransaction) Begin(ctx *ctx.RootContext) error {
-	return gtx.BeginWithTimeout(DEFAULT_GLOBAL_TX_TIMEOUT, ctx)
+	return gtx.BeginWithTimeout(DefaultGlobalTxTimeout, ctx)
 }
 
 func (gtx *DefaultGlobalTransaction) BeginWithTimeout(timeout int32, ctx *ctx.RootContext) error {
-	return gtx.BeginWithTimeoutAndName(timeout, DEFAULT_GLOBAL_TX_NAME, ctx)
+	return gtx.BeginWithTimeoutAndName(timeout, DefaultGlobalTxName, ctx)
 }
 
 // BeginWithTimeoutAndName 开启全局事务

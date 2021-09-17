@@ -1,8 +1,9 @@
 package server
 
 import (
-	"github.com/opentrx/seata-golang/v2/pkg/apis"
 	"sync"
+
+	"github.com/opentrx/seata-golang/v2/pkg/apis"
 )
 
 // CallbackMessageQueue 回调分支事务客户端的消息队列

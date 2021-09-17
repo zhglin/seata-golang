@@ -8,7 +8,7 @@ import (
 	"github.com/opentrx/seata-golang/v2/pkg/util/common"
 )
 
-const LOCK_SPLIT = "^^^"
+const LockSplit = "^^^"
 
 // CollectBranchSessionRowLocks 获取所有分支事务的行锁
 func CollectBranchSessionRowLocks(branchSession *apis.BranchSession) []*apis.RowLock {
